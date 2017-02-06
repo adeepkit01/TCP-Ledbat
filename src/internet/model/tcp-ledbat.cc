@@ -204,7 +204,7 @@ void TcpLedbat::CongestionAvoidance (Ptr<TcpSocketState> tcb, uint32_t segmentsA
 
   if (current_delay > base_delay)
     {
-      queue_delay = current_delay - base_delay;      
+      queue_delay = current_delay - base_delay;
       offset = m_target.GetMilliSeconds () - queue_delay;
     }
   else

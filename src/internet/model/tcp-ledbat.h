@@ -42,18 +42,18 @@ private:
    */
   enum SlowStartType
   {
-    DO_NOT_SLOWSTART,           //!< Do not slowstart
-    DO_SLOWSTART,               //!< Do New Reno Slowstart
+    DO_NOT_SLOWSTART,           //!< Do not Slow Start
+    DO_SLOWSTART,               //!< Do NewReno Slow Start
   };
 
   /**
-   * \brief The state of LEDBAT. If LEDBAT is not in VALID_OWD state, it falls to 
-   * default congestion ops.
+   * \brief The state of LEDBAT. If LEDBAT is not in VALID_OWD state, it falls to
+   *        default congestion ops.
    */
   enum State
   {
     LEDBAT_VALID_OWD  = (1 << 1),  //!< If valid timestamps are present
-    LEDBAT_CAN_SS     = (1 << 3)   //!< If LEDBAT allows slow start
+    LEDBAT_CAN_SS     = (1 << 3)   //!< If LEDBAT allows Slow Start
   };
 
 public:
@@ -133,7 +133,6 @@ protected:
   virtual void CongestionAvoidance (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked);
 
 private:
-
   /**
    *\brief Buffer structure to store delays
    */
@@ -194,7 +193,7 @@ private:
 
   Time m_target;                     //!< Target Queue Delay
   double m_gain;                     //!< GAIN value from RFC
-  SlowStartType m_doSs;                   //!< Permissible Slow Start State
+  SlowStartType m_doSs;              //!< Permissible Slow Start State
   uint32_t m_baseHistoLen;           //!< Length of base delay history buffer
   uint32_t m_noiseFilterLen;         //!< Length of current delay buffer
   uint64_t m_lastRollover;           //!< Timestamp of last added delay
