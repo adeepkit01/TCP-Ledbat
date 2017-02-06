@@ -36,6 +36,26 @@ namespace ns3 {
 
 class TcpLedbat : public TcpNewReno
 {
+private:
+  /**
+   * \brief The slowstart types
+   */
+  enum SlowStartType
+  {
+    DO_NOT_SLOWSTART,           //!< Do not slowstart
+    DO_SLOWSTART,               //!< Do New Reno Slowstart
+  };
+
+  /**
+   * \brief The state of LEDBAT. If LEDBAT is not in VALID_OWD state, it falls to 
+   * default congestion ops.
+   */
+  enum State
+  {
+    LEDBAT_VALID_OWD  = (1 << 1),  //!< If valid timestamps are present
+    LEDBAT_CAN_SS     = (1 << 3)   //!< If LEDBAT allows slow start
+  };
+
 public:
   /**
    * \brief Get the type ID.
@@ -101,7 +121,7 @@ public:
    *
    * \param doSS Slow Start Option
    */
-  void SetDoSs (uint32_t doSS);
+  void SetDoSs (SlowStartType doSS);
 
 protected:
   /**
@@ -166,41 +186,15 @@ private:
   void AddDelay (struct OwdCircBuf &cb, uint32_t owd, uint32_t maxlen);
 
   /**
-   * \brief Update the current delay buffer
-   *
-   * \param owd The delay
-   */
-  void UpdateCurrentDelay (uint32_t owd);
-
-  /**
    * \brief Update the base delay buffer
    *
    * \param owd The delay
    */
   void UpdateBaseDelay (uint32_t owd);
 
-  /**
-   * \brief The slowstart types
-   */
-  enum SlowStartType
-  {
-    DO_NOT_SLOWSTART,           //!< Do not slowstart
-    DO_SLOWSTART,               //!< Do New Reno Slowstart
-  };
-
-  /**
-   * \brief The state of LEDBAT. If LEDBAT is not in VALID_OWD state, it falls to 
-   * default congestion ops.
-   */
-  enum State
-  {
-    LEDBAT_VALID_OWD  = (1 << 1),  //!< If valid timestamps are present
-    LEDBAT_CAN_SS     = (1 << 3)   //!< If LEDBAT allows slow start
-  };
-
-  Time m_Target;                     //!< Target Queue Delay
+  Time m_target;                     //!< Target Queue Delay
   double m_gain;                     //!< GAIN value from RFC
-  uint32_t m_doSs;                   //!< Permissible Slow Start State
+  SlowStartType m_doSs;                   //!< Permissible Slow Start State
   uint32_t m_baseHistoLen;           //!< Length of base delay history buffer
   uint32_t m_noiseFilterLen;         //!< Length of current delay buffer
   uint64_t m_lastRollover;           //!< Timestamp of last added delay

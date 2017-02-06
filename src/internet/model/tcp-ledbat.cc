@@ -38,7 +38,7 @@ TcpLedbat::GetTypeId (void)
     .AddAttribute ("TargetDelay",
                    "Targeted Queue Delay",
                    TimeValue (MilliSeconds (100)),
-                   MakeTimeAccessor (&TcpLedbat::m_Target),
+                   MakeTimeAccessor (&TcpLedbat::m_target),
                    MakeTimeChecker ())
     .AddAttribute ("baseHistoryLen",
                    "Number of Base delay samples",
@@ -56,15 +56,16 @@ TcpLedbat::GetTypeId (void)
                    MakeDoubleAccessor (&TcpLedbat::m_gain),
                    MakeDoubleChecker<double> ())
     .AddAttribute ("SSParam",
-                   "Possibility of Slow Start:  0)DO_NOT_SLOWSTART 1)DO_SLOWSTART",
-                   UintegerValue (1),
-                   MakeUintegerAccessor (&TcpLedbat::SetDoSs),
-                   MakeUintegerChecker<uint32_t> ())
+                   "Possibility of Slow Start",
+                   EnumValue (DO_SLOWSTART),
+                   MakeEnumAccessor (&TcpLedbat::SetDoSs),
+                   MakeEnumChecker (DO_SLOWSTART, "yes",
+                                    DO_NOT_SLOWSTART, "no"))
   ;
   return tid;
 }
 
-void TcpLedbat::SetDoSs (uint32_t doSS)
+void TcpLedbat::SetDoSs (SlowStartType doSS)
 {
   NS_LOG_FUNCTION (this << doSS);
   m_doSs = doSS;
@@ -82,9 +83,9 @@ TcpLedbat::TcpLedbat (void)
   : TcpNewReno ()
 {
   NS_LOG_FUNCTION (this);
-  m_Target = MilliSeconds (100);
+  m_target = MilliSeconds (100);
   m_gain = 1;
-  m_doSs = 1;
+  m_doSs = DO_SLOWSTART;
   m_baseHistoLen = 10;
   m_noiseFilterLen = 4;
   InitCircBuf (m_baseHistory);
@@ -105,7 +106,7 @@ TcpLedbat::TcpLedbat (const TcpLedbat& sock)
   : TcpNewReno (sock)
 {
   NS_LOG_FUNCTION (this);
-  m_Target = sock.m_Target;
+  m_target = sock.m_target;
   m_gain = sock.m_gain;
   m_doSs = sock.m_doSs;
   m_baseHistoLen = sock.m_baseHistoLen;
@@ -175,7 +176,7 @@ void TcpLedbat::IncreaseWindow (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked)
     {
       m_flag |= LEDBAT_CAN_SS;
     }
-  if (m_doSs >= DO_SLOWSTART && tcb->m_cWnd <= tcb->m_ssThresh && (m_flag & LEDBAT_CAN_SS))
+  if (m_doSs == DO_SLOWSTART && tcb->m_cWnd <= tcb->m_ssThresh && (m_flag & LEDBAT_CAN_SS))
     {
       SlowStart (tcb, segmentsAcked);
     }
@@ -198,16 +199,22 @@ void TcpLedbat::CongestionAvoidance (Ptr<TcpSocketState> tcb, uint32_t segmentsA
   double offset;
   uint32_t cwnd = (tcb->m_cWnd.Get ());
   uint32_t max_cwnd;
-  int64_t current_delay;
-  int64_t base_delay;
+  uint64_t current_delay = CurrentDelay (&TcpLedbat::MinCircBuf);
+  uint64_t base_delay = BaseDelay ();
 
-  current_delay = (int64_t)CurrentDelay (&TcpLedbat::MinCircBuf);
-  base_delay = (int64_t)BaseDelay ();
-  queue_delay = current_delay - base_delay;
-  offset = (m_Target.GetMilliSeconds () - (queue_delay));
+  if (current_delay > base_delay)
+    {
+      queue_delay = current_delay - base_delay;      
+      offset = m_target.GetMilliSeconds () - queue_delay;
+    }
+  else
+    {
+      queue_delay = base_delay - current_delay;
+      offset = m_target.GetMilliSeconds () + queue_delay;
+    }
   offset *= m_gain;
   m_sndCwndCnt = offset * segmentsAcked * tcb->m_segmentSize;
-  double inc =  (m_sndCwndCnt * 1.0) / (m_Target.GetMilliSeconds () * tcb->m_cWnd.Get ());
+  double inc =  (m_sndCwndCnt * 1.0) / (m_target.GetMilliSeconds () * tcb->m_cWnd.Get ());
   cwnd += (inc * tcb->m_segmentSize);
 
   max_cwnd = (tcb->m_highTxMark.Get () - tcb->m_lastAckedSeq) + segmentsAcked * tcb->m_segmentSize;
@@ -250,12 +257,6 @@ void TcpLedbat::AddDelay (struct OwdCircBuf &cb, uint32_t owd, uint32_t maxlen)
             }
         }
     }
-}
-
-void TcpLedbat::UpdateCurrentDelay (uint32_t owd)
-{
-  NS_LOG_FUNCTION (this << owd);
-  AddDelay (m_noiseFilter, owd, m_noiseFilterLen);
 }
 
 void TcpLedbat::UpdateBaseDelay (uint32_t owd)
@@ -301,7 +302,7 @@ void TcpLedbat::PktsAcked (Ptr<TcpSocketState> tcb, uint32_t segmentsAcked,
     }
   if (rtt.IsPositive ())
     {
-      UpdateCurrentDelay (tcb->m_rcvTimestampValue - tcb->m_rcvTimestampEchoReply);
+      AddDelay (m_noiseFilter, tcb->m_rcvTimestampValue - tcb->m_rcvTimestampEchoReply, m_noiseFilterLen);
       UpdateBaseDelay (tcb->m_rcvTimestampValue - tcb->m_rcvTimestampEchoReply);
     }
 }

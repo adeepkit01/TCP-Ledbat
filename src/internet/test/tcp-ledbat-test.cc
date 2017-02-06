@@ -24,6 +24,7 @@
 #include "ns3/tcp-congestion-ops.h"
 #include "ns3/tcp-socket-base.h"
 #include "ns3/tcp-ledbat.h"
+#include "ns3/string.h"
 
 namespace ns3 {
 
@@ -139,7 +140,7 @@ TcpLedbatIncrementTest::DoRun ()
   m_state->m_lastAckedSeq = m_lastAckedSeq;
 
   Ptr<TcpLedbat> cong = CreateObject <TcpLedbat> ();
-  cong->SetAttribute ("SSParam", UintegerValue (0));
+  cong->SetAttribute ("SSParam", StringValue ("no"));
   cong->SetAttribute ("noiseFilterLen", UintegerValue (1));
 
   m_state->m_rcvTimestampValue = 2;
@@ -206,7 +207,7 @@ TcpLedbatDecrementTest::DoRun ()
   m_state->m_lastAckedSeq = m_lastAckedSeq;
 
   Ptr<TcpLedbat> cong = CreateObject <TcpLedbat> ();
-  cong->SetAttribute ("SSParam", UintegerValue (0));
+  cong->SetAttribute ("SSParam", StringValue ("no"));
   cong->SetAttribute ("noiseFilterLen", UintegerValue (1));
 
   m_state->m_rcvTimestampValue = 2;
